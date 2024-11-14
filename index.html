@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO Detection Test</title>
+</head>
+<body>
+    <h1>YOLO Detection Test</h1>
+    
+    <!-- Input for uploading an image -->
+    <input type="file" id="imageInput" accept="image/*">
+    
+    <!-- Display the selected image -->
+    <div>
+        <canvas id="canvas"></canvas>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+
+        // Function to handle image upload
+        document.getElementById("imageInput").addEventListener("change", async (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                // Display image on canvas
+                const img = new Image();
+                img.src = URL.createObjectURL(file);
+                
+                img.onload = async () => {
+                    // Set canvas dimensions to match image
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    // Draw image on canvas
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Send image to Flask API for detection
+                    const detections = await detectObjects(file);
+                    if (detections) {
+                        drawBoundingBoxes(detections);
+                    }
+                };
+            }
+        });
+
+        // Function to call the Flask API
+        async function detectObjects(file) {
+            const formData = new FormData();
+            formData.append("image", file);
+
+            try {
+                const response = await fetch("http://127.0.0.1:5000/detect", {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    console.error("Detection failed:", response.statusText);
+                    return null;
+                }
+
+                return await response.json();
+            } catch (error) {
+                console.error("Error during fetch:", error);
+                return null;
+            }
+        }
+
+        // Function to draw bounding boxes with random colors on the canvas
+		function drawBoundingBoxes(detections) {
+			detections.forEach(det => {
+				const [x_min, y_min, x_max, y_max] = det.bbox;
+				const confidence = (det.confidence * 100).toFixed(2);
+
+				// Generate a random color for each bounding box
+				const randomColor = `rgb(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)})`;
+
+				// Draw bounding box with the random color
+				ctx.strokeStyle = randomColor;
+				ctx.lineWidth = 2;
+				ctx.strokeRect(x_min, y_min, x_max - x_min, y_max - y_min);
+
+				// Draw confidence score label inside the box
+				ctx.fillStyle = randomColor;
+				ctx.font = "16px Arial";
+				ctx.fillText(`Conf: ${confidence}%`, x_min + 5, y_min + 20); // Position the confidence text inside the box
+			});
+		}
+    </script>
+</body>
+</html>
