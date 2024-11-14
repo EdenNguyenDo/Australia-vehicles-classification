@@ -70,13 +70,13 @@ def transform_annotations(input_json_dir, output_json_dir):
                 output_filepath = os.path.join(output_json_dir, filename.replace('.json', '.jsonl'))
                 with open(output_filepath, 'a') as f:  # Open in append mode
                     json.dump(output_data, f)
-                    f.write("\n")  # Write each JSON object on a new line
+                    f.write("//n")  # Write each JSON object on a new line
 
                 print(f"Processed {filename} and saved to {output_filepath}")
 
 
 # Example usage:
-input_json_dir = 'C://transmetric//dev//python//AI camera//trial//Florence-2//vehicle_dataset//train'
-output_json_dir = 'C://transmetric//dev//python//AI camera//trial//Florence-2//vehicle_dataset//train//output_annotations'
+input_json_dir = "C://transmetric//dev//python//AI camera//trial//fine-tuned-Florence-2//Australia-vehicles-classification//dataset//valid"
+output_json_dir = 'C://transmetric//dev//python//AI camera//trial//Florence-2//vehicle_dataset//valid//output'
 
 transform_annotations(input_json_dir, output_json_dir)
