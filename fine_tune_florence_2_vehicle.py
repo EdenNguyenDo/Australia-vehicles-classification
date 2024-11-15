@@ -8,9 +8,9 @@ Original file is located at
 
 ## Setup
 """
+from server import DEVICE
 
-# Commented out IPython magic to ensure Python compatibility.
-# %%capture
+
 # !pip install timm flash_attn einops;
 
 # Commented out IPython magic to ensure Python compatibility.
@@ -27,18 +27,14 @@ Original file is located at
 # echo "Cloning complete. Contents of the repository:"
 # ls Australia-vehicles-classification
 
-cd Australia-vehicles-classification
-
 """Now we import the packages we'll need, including the `utils.py` module from the repository that we just cloned. This file provides misellaneous functionality to make it easier to work with Florence-2."""
 
 # Commented out IPython magic to ensure Python compatibility.
-import copy
 
 from transformers import AutoProcessor, AutoModelForCausalLM
 from PIL import Image
-import requests
-
 import utils
+import torch
 
 
 
@@ -46,9 +42,10 @@ import utils
 
 """Next we load the Florence-2 model and processor"""
 
-model_id = 'microsoft/Florence-2-large'
-model = AutoModelForCausalLM.from_pretrained(model_id, trust_remote_code=True).eval().cuda()
-processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=True)
+CHECKPOINT = "microsoft/Florence-2-large"
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = AutoModelForCausalLM.from_pretrained(CHECKPOINT, trust_remote_code=True).to(DEVICE)
+processor = AutoProcessor.from_pretrained(CHECKPOINT, trust_remote_code=True)
 
 """And then we set these models as constants for our `utils.py` module so that the functions can utilize them as global constants."""
 
@@ -80,7 +77,7 @@ for task in tasks:
 
 """# FINE TUNING FLORENCE 2 AND TRAIN ON A CUSTOM DATASET"""
 
-!pip install -q roboflow git+https://github.com/roboflow/supervision.git
+# !pip install -q roboflow git+https://github.com/roboflow/supervision.git
 
 # @title Imports
 
@@ -95,8 +92,6 @@ import itertools
 
 import numpy as np
 import supervision as sv
-
-from google.colab import userdata
 from IPython.core.display import display, HTML
 from torch.utils.data import Dataset, DataLoader
 from transformers import (
@@ -111,14 +106,8 @@ from peft import LoraConfig, get_peft_model
 from PIL import Image
 from roboflow import Roboflow
 
-CHECKPOINT = "microsoft/Florence-2-large"
-#REVISION = 'refs/pr/6'
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model = AutoModelForCausalLM.from_pretrained(CHECKPOINT, trust_remote_code=True).eval().cuda()
-processor = AutoProcessor.from_pretrained(CHECKPOINT, trust_remote_code=True)
 
-# @title Define `DetectionsDataset` class
 
 class JSONLDataset:
     def __init__(self, jsonl_file_path: str, image_directory_path: str):
@@ -203,69 +192,11 @@ config = LoraConfig(
     bias="none",
     inference_mode=False,
     use_rslora=True,
-    init_lora_weights="gaussian",
-    revision=REVISION
+    init_lora_weights="gaussian"
 )
 
 peft_model = get_peft_model(model, config)
 peft_model.print_trainable_parameters()
-
-torch.cuda.empty_cache()
-
-
-
-# @title Run inference with pre-trained Florence-2 model on validation dataset
-
-def render_inline(image: Image.Image, resize=(128, 128)):
-    """Convert image into inline html."""
-    image.resize(resize)
-    with io.BytesIO() as buffer:
-        image.save(buffer, format='png')
-        image_b64 = str(base64.b64encode(buffer.getvalue()), "utf-8")
-        return f"data:image/png;base64,{image_b64}"
-
-
-def render_example(image: Image.Image, response):
-    # try:
-      detections = sv.Detections.from_lmm(sv.LMM.FLORENCE_2, response, resolution_wh=image.size)
-      image = sv.BoundingBoxAnnotator(color_lookup=sv.ColorLookup.INDEX).annotate(image.copy(), detections)
-      image = sv.LabelAnnotator(color_lookup=sv.ColorLookup.INDEX).annotate(image, detections)
-      # if detections is not None:
-      #   utils.plot_bbox(detections, image)
-      # except:
-      #print('failed to render model response')
-      return f"""
-
-
-      {html.escape(json.dumps(response))}
-      """
-
-
-def render_inference_results(model, dataset: DetectionDataset, count: int):
-    html_out = ""
-    count = min(count, len(dataset))
-    for i in range(count):
-        image, data = dataset.dataset[i]
-        prefix = data['prefix']
-        suffix = data['suffix']
-        # Ensure the image is in RGB format and has the correct shape.
-        image = image.convert('RGB')  # Convert to RGB format
-
-        inputs = processor(text=prefix, images=image, return_tensors="pt").to(DEVICE)
-        generated_ids = model.generate(
-            input_ids=inputs["input_ids"],
-            pixel_values=inputs["pixel_values"],
-            max_new_tokens=1024,
-            num_beams=3
-        )
-        generated_text = processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
-        answer = processor.post_process_generation(generated_text, task='<OD>', image_size=image.size)
-    #     if answer is not None:
-        html_out += render_example(image, answer)
-    # print(html_out)
-    display(HTML(html_out))
-
-render_inference_results(peft_model, val_dataset, 4)
 
 
 
@@ -283,7 +214,6 @@ def train_model(train_loader, val_loader, model, processor, epochs=10, lr=1e-6):
         num_training_steps=num_training_steps,
     )
 
-    render_inference_results(peft_model, val_loader.dataset, 6)
 
     for epoch in range(epochs):
         model.train()
@@ -342,49 +272,48 @@ def train_model(train_loader, val_loader, model, processor, epochs=10, lr=1e-6):
 # 
 # %%time
 # 
-# EPOCHS = 17
-# LR = 5e-6
+EPOCHS = 17
+LR = 5e-6
 # 
-# train_model(train_loader, val_loader, peft_model, processor, epochs=EPOCHS, lr=LR)
-
-
-
+train_model(train_loader, val_loader, peft_model, processor, epochs=EPOCHS, lr=LR)
 
 
 """### Save the model"""
 
-peft_model.save_pretrained("/content/Australia-vehicles-classification/Australia-vehicles-classification/saved_model/florence2-lora")
-processor.save_pretrained("/content/Australia-vehicles-classification/Australia-vehicles-classification/saved_model/florence2-lora")
-
-!ls -la "/content/Australia-vehicles-classification/Australia-vehicles-classification/saved_model/florence2-lora"
-
-# Running inference
-!pip install inference
+peft_model.save_pretrained("saved_model/ft-florence2-LORA")
+processor.save_pretrained("saved_model/ft-florence2-LORA")
 
 
-
-import os
-from PIL import Image
-import json
-from google.colab import userdata
-import roboflow
-
-rf = Roboflow(api_key=userdata.get('ROBOFLOW_KEY'))
-project = rf.workspace("first-project-xpdzs").project("vehicle-detect-tksbg")
-version = project.version(3)
-
-version.deploy(model_type="florence-2-large", model_path="/content/Australia-vehicles-classification/Australia-vehicles-classification/saved_model/florence2-lora")
-
-from inference import get_model
-
-lora_model = get_model("vehicle-detect-tksbg/3", api_key=userdata.get('ROBOFLOW_KEY'))
-
-image = Image.open("Australia-vehicles-classification/dataset/test/frame7.png")
-response = lora_model.infer(image)
-print(response)
-
-import pdb
-
-!pip install -q colab_ssh --upgrade
-from colab_ssh import launch_ssh
-launch_ssh('your_ssh_key_password', '2ord4pJVqUZRzmVmwg4zfUDvq5s_2CGfao4dDhsC5wX8qyeXB')
+#
+# !ls -la "/content/Australia-vehicles-classification/Australia-vehicles-classification/saved_model/florence2-lora"
+#
+# # Running inference
+# !pip install inference
+#
+#
+#
+# import os
+# from PIL import Image
+# import json
+# from google.colab import userdata
+# import roboflow
+#
+# rf = Roboflow(api_key=userdata.get('ROBOFLOW_KEY'))
+# project = rf.workspace("first-project-xpdzs").project("vehicle-detect-tksbg")
+# version = project.version(3)
+#
+# version.deploy(model_type="florence-2-large", model_path="/content/Australia-vehicles-classification/Australia-vehicles-classification/saved_model/florence2-lora")
+#
+# from inference import get_model
+#
+# lora_model = get_model("vehicle-detect-tksbg/3", api_key=userdata.get('ROBOFLOW_KEY'))
+#
+# image = Image.open("Australia-vehicles-classification/dataset/test/frame7.png")
+# response = lora_model.infer(image)
+# print(response)
+#
+# import pdb
+#
+# !pip install -q colab_ssh --upgrade
+# from colab_ssh import launch_ssh
+# launch_ssh('your_ssh_key_password', '2ord4pJVqUZRzmVmwg4zfUDvq5s_2CGfao4dDhsC5wX8qyeXB')
