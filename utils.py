@@ -90,8 +90,8 @@ def run_example(task_prompt: TaskType, image, text_input=None):
     #
     inputs = processor(text=prompt, images=image, return_tensors="pt")
     generated_ids = model.generate(
-      input_ids=inputs["input_ids"].cuda(),
-      pixel_values=inputs["pixel_values"].cuda(),
+      input_ids=inputs["input_ids"],
+      pixel_values=inputs["pixel_values"],
       max_new_tokens=1024,
       early_stopping=False,
       do_sample=False,
