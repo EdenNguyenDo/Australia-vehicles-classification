@@ -76,7 +76,7 @@ def transform_annotations(input_json_dir, output_json_dir):
 
 
 # Example usage:
-input_json_dir = "C://transmetric//dev//python//AI camera//trial//fine-tuned-Florence-2//Australia-vehicles-classification//dataset//valid"
-output_json_dir = 'C://transmetric//dev//python//AI camera//trial//Florence-2//vehicle_dataset//valid//output'
+input_json_dir = "C://transmetric//dev//python//AI camera//trial//fine-tuned-Florence-2//Australia-vehicles-classification//dataset//train//raw_annotations"
+output_json_dir = "C://transmetric//dev//python//AI camera//trial//fine-tuned-Florence-2//Australia-vehicles-classification//dataset//train//output_annotations"
 
 transform_annotations(input_json_dir, output_json_dir)

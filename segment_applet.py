@@ -35,7 +35,6 @@ def detect_objects():
     file = request.files['image']
     img = Image.open(file.stream).convert('RGB')
 
-
     result = run_example(task, img)
     plot_bbox(result[task], img)
 
