@@ -7,7 +7,8 @@ from transformers import (
 )
 from tqdm import tqdm
 import torch
-from fine_tune_florence_2_vehicle import DEVICE
+from fine_tune_florence_2_vehicle import DEVICE, peft_model
+from render_result import render_inference_results
 
 
 def train_model(train_loader, val_loader, model, processor, epochs=10, lr=1e-6):

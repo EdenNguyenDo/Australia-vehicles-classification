@@ -1,4 +1,4 @@
-from peft import LoraConfig, get_peft_model
+from peft import LoraConfig
 
 
 def configLora():

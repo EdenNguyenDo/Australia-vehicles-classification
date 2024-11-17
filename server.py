@@ -2,11 +2,8 @@ import torch
 from flask import Flask, request, jsonify
 from PIL import Image
 from transformers import AutoModelForCausalLM, AutoProcessor
-
 import utils
-from ultralytics import YOLO
 from flask_cors import CORS
-
 from utils import run_example, plot_bbox
 
 # Initialize Flask app
@@ -14,7 +11,6 @@ app = Flask(__name__)
 CORS(app)
 
 # Load YOLO model (use a pre-trained model or specify your custom model path)
-#model = YOLO("FastSAM-s.pt")
 model_id = 'microsoft/Florence-2-base'
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
