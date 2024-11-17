@@ -20,13 +20,11 @@ Original file is located at
 # !pip install -q roboflow git+https://github.com/roboflow/supervision.git
 from prepareData import DetectionDataset
 from train import train_model
-from config import configLora, collate_fn, model, processor
+from config.config import configLora, collate_fn, model, processor
 from torch.utils.data import DataLoader
 from peft import get_peft_model
 from PIL import Image
-import utils
-
-
+from helpers import utils
 
 # Set model and processor for the `utils.py` module
 utils.set_model_info(model, processor)
