@@ -9,6 +9,7 @@ Original file is located at
 ## Setup
 """
 from server import DEVICE
+from train import train_model
 
 # !pip install timm flash_attn einops;
 # !pip install -q roboflow git+https://github.com/roboflow/supervision.git
@@ -16,13 +17,29 @@ from server import DEVICE
 """Now we import the packages we'll need, including the `utils.py` module from the repository that we just cloned. 
 This file provides misellaneous functionality to make it easier to work with Florence-2."""
 
-# Commented out IPython magic to ensure Python compatibility.
 
+import os
+import json
+import torch
+from config import configLora
+import numpy as np
+import supervision as sv
+from IPython.core.display import display, HTML
+from torch.utils.data import Dataset, DataLoader
+from transformers import (
+    AdamW,
+    AutoModelForCausalLM,
+    AutoProcessor,
+    get_scheduler
+)
+from tqdm import tqdm
+from typing import List, Dict, Any, Tuple, Generator
+from peft import get_peft_model
+from PIL import Image
 from transformers import AutoProcessor, AutoModelForCausalLM
 from PIL import Image
 import utils
 import torch
-
 # %matplotlib inline
 
 """Next we load the Florence-2 model and processor"""
@@ -59,25 +76,6 @@ for task in tasks:
 
 """# FINE TUNING FLORENCE 2 AND TRAIN ON A CUSTOM DATASET"""
 
-import os
-import json
-import torch
-
-import numpy as np
-import supervision as sv
-from IPython.core.display import display, HTML
-from torch.utils.data import Dataset, DataLoader
-from transformers import (
-    AdamW,
-    AutoModelForCausalLM,
-    AutoProcessor,
-    get_scheduler
-)
-from tqdm import tqdm
-from typing import List, Dict, Any, Tuple, Generator
-from peft import LoraConfig, get_peft_model
-from PIL import Image
-from roboflow import Roboflow
 
 
 
@@ -206,6 +204,9 @@ val_dataset = DetectionDataset(
     image_directory_path = "dataset/valid/"
 )
 
+"""
+Configure train loader and validation loader
+"""
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, collate_fn=collate_fn, num_workers=NUM_WORKERS, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, collate_fn=collate_fn, num_workers=NUM_WORKERS)
 
@@ -215,97 +216,11 @@ val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, collate_fn=collate_f
 
 LoRA is low-rank decomposition method to reduce the number of trainable parameters which speeds up finetuning large models and uses less memory.
 """
-
-# @title Config Lora
-config = LoraConfig(
-    r=8,
-    lora_alpha=8,
-    target_modules=["q_proj", "o_proj", "k_proj", "v_proj", "linear", "Conv2d", "lm_head", "fc2"],
-    task_type="CAUSAL_LM",
-    lora_dropout=0.05,
-    bias="none",
-    inference_mode=False,
-    use_rslora=True,
-    init_lora_weights="gaussian"
-)
-
-peft_model = get_peft_model(model, config)
+peft_model = get_peft_model(model, configLora())
 peft_model.print_trainable_parameters()
 
 
-
-
-
 # @title Define train loop
-
-def train_model(train_loader, val_loader, model, processor, epochs=10, lr=1e-6):
-    optimizer = AdamW(model.parameters(), lr=lr)
-    num_training_steps = epochs * len(train_loader)
-    lr_scheduler = get_scheduler(
-        name="linear",
-        optimizer=optimizer,
-        num_warmup_steps=0,
-        num_training_steps=num_training_steps,
-    )
-
-
-    for epoch in range(epochs):
-        model.train()
-        train_loss = 0
-        for inputs, answers in tqdm(train_loader, desc=f"Training Epoch {epoch + 1}/{epochs}"):
-
-            input_ids = inputs["input_ids"]
-            pixel_values = inputs["pixel_values"]
-            labels = processor.tokenizer(
-                text=answers,
-                return_tensors="pt",
-                padding=True,
-                return_token_type_ids=False
-            ).input_ids.to(DEVICE)
-
-            outputs = model(input_ids=input_ids, pixel_values=pixel_values, labels=labels)
-            loss = outputs.loss
-
-            loss.backward(), optimizer.step(), lr_scheduler.step(), optimizer.zero_grad()
-            train_loss += loss.item()
-
-        avg_train_loss = train_loss / len(train_loader)
-        print(f"Average Training Loss: {avg_train_loss}")
-
-        model.eval()
-        val_loss = 0
-        with torch.no_grad():
-            for inputs, answers in tqdm(val_loader, desc=f"Validation Epoch {epoch + 1}/{epochs}"):
-
-                input_ids = inputs["input_ids"]
-                pixel_values = inputs["pixel_values"]
-                labels = processor.tokenizer(
-                    text=answers,
-                    return_tensors="pt",
-                    padding=True,
-                    return_token_type_ids=False
-                ).input_ids.to(DEVICE)
-
-                outputs = model(input_ids=input_ids, pixel_values=pixel_values, labels=labels)
-                loss = outputs.loss
-
-                val_loss += loss.item()
-
-            avg_val_loss = val_loss / len(val_loader)
-            print(f"Average Validation Loss: {avg_val_loss}")
-
-            render_inference_results(peft_model, val_loader.dataset, 6)
-
-        output_dir = f"./model_checkpoints/epoch_{epoch+1}"
-        os.makedirs(output_dir, exist_ok=True)
-        model.save_pretrained(output_dir)
-        processor.save_pretrained(output_dir)
-
-# Commented out IPython magic to ensure Python compatibility.
-# # @title Run train loop
-# 
-# %%time
-# 
 EPOCHS = 17
 LR = 5e-6
 # 
@@ -317,37 +232,3 @@ train_model(train_loader, val_loader, peft_model, processor, epochs=EPOCHS, lr=L
 peft_model.save_pretrained("saved_model/ft-florence2-LORA")
 processor.save_pretrained("saved_model/ft-florence2-LORA")
 
-
-#
-# !ls -la "/content/Australia-vehicles-classification/Australia-vehicles-classification/saved_model/florence2-lora"
-#
-# # Running inference
-# !pip install inference
-#
-#
-#
-# import os
-# from PIL import Image
-# import json
-# from google.colab import userdata
-# import roboflow
-#
-# rf = Roboflow(api_key=userdata.get('ROBOFLOW_KEY'))
-# project = rf.workspace("first-project-xpdzs").project("vehicle-detect-tksbg")
-# version = project.version(3)
-#
-# version.deploy(model_type="florence-2-large", model_path="/content/Australia-vehicles-classification/Australia-vehicles-classification/saved_model/florence2-lora")
-#
-# from inference import get_model
-#
-# lora_model = get_model("vehicle-detect-tksbg/3", api_key=userdata.get('ROBOFLOW_KEY'))
-#
-# image = Image.open("Australia-vehicles-classification/dataset/test/frame7.png")
-# response = lora_model.infer(image)
-# print(response)
-#
-# import pdb
-#
-# !pip install -q colab_ssh --upgrade
-# from colab_ssh import launch_ssh
-# launch_ssh('your_ssh_key_password', '2ord4pJVqUZRzmVmwg4zfUDvq5s_2CGfao4dDhsC5wX8qyeXB')
