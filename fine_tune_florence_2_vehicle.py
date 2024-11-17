@@ -10,24 +10,11 @@ Original file is located at
 """
 from server import DEVICE
 
-
 # !pip install timm flash_attn einops;
+# !pip install -q roboflow git+https://github.com/roboflow/supervision.git
 
-# Commented out IPython magic to ensure Python compatibility.
-# %%bash
-# # Check if the directory already exists and remove it if it does.
-# if [ -d "Australia-vehicles-classification" ]; then
-#   rm -rf Australia-vehicles-classification
-# fi
-# 
-# # Clone the repository.
-# git clone https://github.com/EdenNguyenDo/Australia-vehicles-classification.git
-# 
-# # Verify the clone was successful.
-# echo "Cloning complete. Contents of the repository:"
-# ls Australia-vehicles-classification
-
-"""Now we import the packages we'll need, including the `utils.py` module from the repository that we just cloned. This file provides misellaneous functionality to make it easier to work with Florence-2."""
+"""Now we import the packages we'll need, including the `utils.py` module from the repository that we just cloned. 
+This file provides misellaneous functionality to make it easier to work with Florence-2."""
 
 # Commented out IPython magic to ensure Python compatibility.
 
@@ -35,8 +22,6 @@ from transformers import AutoProcessor, AutoModelForCausalLM
 from PIL import Image
 import utils
 import torch
-
-
 
 # %matplotlib inline
 
@@ -65,10 +50,7 @@ Object detection automatically detects the salient objects in an image. Florence
 3. Descriptive labels
 """
 
-tasks = [#utils.TaskType.REGION_PROPOSAL,
-         utils.TaskType.OBJECT_DETECTION
-         #utils.TaskType.DENSE_REGION_CAPTION,
-         ]
+tasks = [utils.TaskType.OBJECT_DETECTION]
 
 for task in tasks:
   results = utils.run_example(task, image_rgb)
@@ -77,18 +59,9 @@ for task in tasks:
 
 """# FINE TUNING FLORENCE 2 AND TRAIN ON A CUSTOM DATASET"""
 
-# !pip install -q roboflow git+https://github.com/roboflow/supervision.git
-
-# @title Imports
-
-import io
 import os
-import re
 import json
 import torch
-import html
-import base64
-import itertools
 
 import numpy as np
 import supervision as sv
@@ -110,12 +83,34 @@ from roboflow import Roboflow
 
 
 class JSONLDataset:
+    """
+    A dataset class for loading images and annotations from a JSONL file.
+
+    Attributes:
+        jsonl_file_path (str): Path to the JSONL file containing annotations.
+        image_directory_path (str): Path to the directory containing images.
+        entries (List[Dict[str, Any]]): Parsed list of annotation entries.
+    """
+
     def __init__(self, jsonl_file_path: str, image_directory_path: str):
+        """
+        Initialize the dataset with a JSONL file and image directory.
+
+        Args:
+            jsonl_file_path (str): Path to the JSONL annotation file.
+            image_directory_path (str): Path to the directory containing images.
+        """
         self.jsonl_file_path = jsonl_file_path
         self.image_directory_path = image_directory_path
         self.entries = self._load_entries()
 
     def _load_entries(self) -> List[Dict[str, Any]]:
+        """
+        Parse the JSONL file to load annotation entries.
+
+        Returns:
+            List[Dict[str, Any]]: A list of parsed entries from the JSONL file.
+        """
         entries = []
         with open(self.jsonl_file_path, 'r') as file:
             for line in file:
@@ -124,9 +119,24 @@ class JSONLDataset:
         return entries
 
     def __len__(self) -> int:
+        """Return the number of entries in the dataset."""
+
         return len(self.entries)
 
     def __getitem__(self, idx: int) -> Tuple[Image.Image, Dict[str, Any]]:
+        """
+        Retrieve an image and its associated annotation.
+
+        Args:
+            idx (int): Index of the desired entry.
+
+        Returns:
+            Tuple[Image.Image, Dict[str, Any]]: The image and its annotation data.
+
+        Raises:
+            IndexError: If the index is out of range.
+            FileNotFoundError: If the specified image file is not found.
+        """
         if idx < 0 or idx >= len(self.entries):
             raise IndexError("Index out of range")
 
@@ -140,13 +150,37 @@ class JSONLDataset:
 
 
 class DetectionDataset(Dataset):
+    """
+    A PyTorch Dataset wrapper for handling detection datasets.
+
+    Attributes:
+        dataset (JSONLDataset): The underlying dataset object.
+    """
+
     def __init__(self, jsonl_file_path: str, image_directory_path: str):
+        """
+        Initialize the detection dataset using a JSONL file and image directory.
+
+        Args:
+            jsonl_file_path (str): Path to the JSONL annotation file.
+            image_directory_path (str): Path to the directory containing images.
+        """
         self.dataset = JSONLDataset(jsonl_file_path, image_directory_path)
 
     def __len__(self):
+        """Return the number of entries in the dataset."""
         return len(self.dataset)
 
     def __getitem__(self, idx):
+        """
+        Retrieve a dataset entry consisting of prefix, suffix, and image.
+
+        Args:
+            idx (int): Index of the desired entry.
+
+        Returns:
+            Tuple[str, str, Image.Image]: Prefix, suffix, and the associated image.
+        """
         image, data = self.dataset[idx]
         prefix = data['prefix']
         suffix = data['suffix']
