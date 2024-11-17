@@ -1,14 +1,10 @@
 
 
 import os
-from transformers import (
-    AdamW,
-    get_scheduler
-)
+from transformers import AdamW, get_scheduler
 from tqdm import tqdm
-import torch
-from fine_tune_florence_2_vehicle import DEVICE, peft_model
-from render_result import render_inference_results
+from torch import no_grad
+from config import DEVICE
 
 
 def train_model(train_loader, val_loader, model, processor, epochs=10, lr=1e-6):
@@ -47,7 +43,7 @@ def train_model(train_loader, val_loader, model, processor, epochs=10, lr=1e-6):
 
         model.eval()
         val_loss = 0
-        with torch.no_grad():
+        with no_grad():
             for inputs, answers in tqdm(val_loader, desc=f"Validation Epoch {epoch + 1}/{epochs}"):
 
                 input_ids = inputs["input_ids"]
@@ -67,7 +63,6 @@ def train_model(train_loader, val_loader, model, processor, epochs=10, lr=1e-6):
             avg_val_loss = val_loss / len(val_loader)
             print(f"Average Validation Loss: {avg_val_loss}")
 
-            render_inference_results(peft_model, val_loader.dataset, 6)
 
         output_dir = f"./model_checkpoints/epoch_{epoch+1}"
         os.makedirs(output_dir, exist_ok=True)

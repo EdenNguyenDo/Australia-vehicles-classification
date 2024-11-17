@@ -20,28 +20,17 @@ Original file is located at
 # !pip install -q roboflow git+https://github.com/roboflow/supervision.git
 from prepareData import DetectionDataset
 from train import train_model
-from config import configLora
+from config import configLora, collate_fn, model, processor
 from torch.utils.data import DataLoader
 from peft import get_peft_model
 from PIL import Image
-from transformers import AutoProcessor, AutoModelForCausalLM
 import utils
-import torch
 
 
-# Load Florence-2 model and processor
-"""
-Load the Florence-2 model and processor using the Hugging Face `transformers` library.
-"""
-CHECKPOINT = "microsoft/Florence-2-large"
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = AutoModelForCausalLM.from_pretrained(CHECKPOINT, trust_remote_code=True).to(DEVICE)
-processor = AutoProcessor.from_pretrained(CHECKPOINT, trust_remote_code=True)
 
 # Set model and processor for the `utils.py` module
 utils.set_model_info(model, processor)
 
-# Load and preprocess images
 """
 Demonstrate image loading for object detection.
 
@@ -71,20 +60,7 @@ Prepare training and validation datasets and their corresponding data loaders.
 BATCH_SIZE = 1
 NUM_WORKERS = 0
 
-def collate_fn(batch):
-    """
-    Custom collate function for the DataLoader.
 
-    Args:
-        batch (list): Batch of samples containing questions, answers, and images.
-
-    Returns:
-        tuple: Processed inputs and corresponding answers.
-    """
-    questions, answers, images = zip(*batch)
-    images = [image.convert('RGB') for image in images]
-    inputs = processor(text=list(questions), images=list(images), return_tensors="pt", padding=True).to(DEVICE)
-    return inputs, answers
 
 train_dataset = DetectionDataset(
     jsonl_file_path="dataset/train/annotation.jsonl",

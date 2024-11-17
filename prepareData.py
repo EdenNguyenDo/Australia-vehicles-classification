@@ -1,14 +1,11 @@
 
 
-
-from server import DEVICE
-from train import train_model
-
 # !pip install timm flash_attn einops;
 # !pip install -q roboflow git+https://github.com/roboflow/supervision.git
 
-"""Now we import the packages we'll need, including the `utils.py` module from the repository that we just cloned. 
-This file provides misellaneous functionality to make it easier to work with Florence-2."""
+"""
+This file create 2 classes with methods to prepare the image and annotation dataset for training and validating.
+"""
 
 
 import os
@@ -16,7 +13,6 @@ import json
 from torch.utils.data import Dataset
 from typing import List, Dict, Any, Tuple
 from PIL import Image
-
 
 
 

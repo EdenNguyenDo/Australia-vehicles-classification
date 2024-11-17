@@ -1,33 +1,18 @@
+
+
+"""This file define functions for rendering inference output for debugging and displaying"""
+
 import base64
 import html
 import io
-import os
 import json
-import torch
 from supervision import DetectionDataset
-
-from config import configLora
-import numpy as np
 import supervision as sv
 from IPython.core.display import display, HTML
-from torch.utils.data import Dataset, DataLoader
-from transformers import (
-    AdamW,
-    AutoModelForCausalLM,
-    AutoProcessor,
-    get_scheduler
-)
-from tqdm import tqdm
-from typing import List, Dict, Any, Tuple, Generator
-from peft import get_peft_model, peft_model
 from PIL import Image
-from transformers import AutoProcessor, AutoModelForCausalLM
-from PIL import Image
-
-from fine_tune_florence_2_vehicle import processor, val_dataset, DEVICE
+from config import processor, DEVICE
 
 
-# @title Run inference with pre-trained Florence-2 model on validation dataset
 
 def render_inline(image: Image.Image, resize=(128, 128)):
     """Convert image into inline html."""
@@ -74,4 +59,3 @@ def render_inference_results(model, dataset: DetectionDataset, count: int):
     display(HTML(html_out))
 
 
-render_inference_results(peft_model, val_dataset, 4)
