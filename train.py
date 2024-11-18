@@ -54,6 +54,9 @@ def train_model(train_loader, val_loader, model, processor, epochs=10, lr=1e-6):
             # Extract input tensors (input_ids and pixel_values) from the data
             input_ids = inputs["input_ids"]
             pixel_values = inputs["pixel_values"]
+            #todo -data augmentation later, expand the tensor output on its leftmost axis, with augmented version of the original image
+
+
 
             # Process answers to match the format expected by the model (tokenized labels)
             labels = processor.tokenizer(

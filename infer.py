@@ -10,17 +10,22 @@ from helpers import utils
 from helpers.utils import TaskType
 from transformers import AutoProcessor, AutoModelForCausalLM
 
-CHECKPOINT = "saved_model/saved_model_test/epoch_3"
-
 path = "dataset/valid/frame9.png"
 image = Image.open(path)
 image_rgb = Image.open(path).convert("RGB")
 
-# Load trained model
-peft_model = AutoModelForCausalLM.from_pretrained(CHECKPOINT, trust_remote_code=True).to(DEVICE)
-processor = AutoProcessor.from_pretrained(CHECKPOINT, trust_remote_code=True)
+def run_inference(input_img):
 
-utils.set_model_info(peft_model,processor)
+    CHECKPOINT = "saved_model/saved_model_test/epoch_3"
 
-result = utils.run_example(TaskType.OBJECT_DETECTION, image_rgb)
-utils.plot_bbox(result[TaskType.OBJECT_DETECTION], image)
+
+    # Load trained model
+    peft_model = AutoModelForCausalLM.from_pretrained(CHECKPOINT, trust_remote_code=True).to(DEVICE)
+    processor = AutoProcessor.from_pretrained(CHECKPOINT, trust_remote_code=True)
+
+    utils.set_model_info(peft_model,processor)
+
+    result = utils.run_example(TaskType.OBJECT_DETECTION, input_img)
+    # utils.plot_bbox(result[TaskType.OBJECT_DETECTION], input_img)
+
+    return result

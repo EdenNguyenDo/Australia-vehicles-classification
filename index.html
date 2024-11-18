@@ -71,8 +71,8 @@
         // Function to draw bounding boxes with random colors on the canvas
 		function drawBoundingBoxes(detections) {
 			detections.forEach(det => {
-				const [x_min, y_min, x_max, y_max] = det.bbox;
-				const confidence = (det.confidence * 100).toFixed(2);
+				const [x_topleft, y_topleft, x_bottomright, y_bottomright] = det.bbox;
+				const box_label = det.class * 100).toFixed(2);
 
 				// Generate a random color for each bounding box
 				const randomColor = `rgb(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)})`;
@@ -80,12 +80,12 @@
 				// Draw bounding box with the random color
 				ctx.strokeStyle = randomColor;
 				ctx.lineWidth = 2;
-				ctx.strokeRect(x_min, y_min, x_max - x_min, y_max - y_min);
+				ctx.strokeRect(x_topleft, y_topleft, x_bottomright, y_bottomright);
 
 				// Draw confidence score label inside the box
 				ctx.fillStyle = randomColor;
-				ctx.font = "16px Arial";
-				ctx.fillText(`Conf: ${confidence}%`, x_min + 5, y_min + 20); // Position the confidence text inside the box
+				ctx.font = "14px Arial";
+				ctx.fillText(`Conf: ${box_label}%`, x_topleft, y_topleft); // Position the confidence text inside the box
 			});
 		}
     </script>

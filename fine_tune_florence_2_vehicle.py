@@ -10,8 +10,6 @@ from PIL import Image
 from helpers import utils
 
 """
-fine-tune-florence-2-vehicle.ipynb
-
 This script demonstrates how to fine-tune the Florence-2 model for vehicle detection using a custom dataset.
 It includes data preparation, model loading, fine-tuning with LoRA, and saving the trained model.
 
@@ -22,43 +20,15 @@ Modules:
     - config: Includes `configLora` to configure LoRA parameters for fine-tuning.
     - utils: Provides utility functions for working with Florence-2, such as running examples and plotting results.
 
-Original file is located at
+Adapted from
     https://colab.research.google.com/drive/1-GAqpF8VsjM8XkVO7DBA8GLpgXGJOwxj
 """
 
 # Set model and processor for the `utils.py` module
 utils.set_model_info(model, processor)
 
-"""
-Demonstrate image loading for object detection.
-
-Image path:
-    - path: Specifies the image file path for demonstration.
-"""
-path = "dataset/train/frame2.png"
-image = Image.open(path)
-image_rgb = Image.open(path).convert("RGB")
-
-# Perform object detection
-"""
-Run object detection on the sample image using the Florence-2 model.
-"""
-tasks = [utils.TaskType.OBJECT_DETECTION]
-
-for task in tasks:
-    results = utils.run_example(task, image_rgb)
-    print(task.value)
-    utils.plot_bbox(results[task], image)
-
-# Prepare datasets and data loaders
-"""
-Prepare training and validation datasets and their corresponding data loaders.
-"""
-
-BATCH_SIZE = 1
+BATCH_SIZE = 2
 NUM_WORKERS = 0
-
-
 
 train_dataset = DetectionDataset(
     jsonl_file_path="dataset/train/annotation.jsonl",
