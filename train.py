@@ -4,7 +4,7 @@ import os
 from transformers import AdamW, get_scheduler
 from tqdm import tqdm
 from torch import no_grad
-from config import DEVICE
+from config.config import DEVICE
 
 
 def train_model(train_loader, val_loader, model, processor, epochs=10, lr=1e-6):
