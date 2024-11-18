@@ -1,3 +1,14 @@
+# Import required libraries and modules
+# !pip install timm flash_attn einops;
+# !pip install -q roboflow git+https://github.com/roboflow/supervision.git
+from prepareData import DetectionDataset
+from train import train_model
+from config.config import configLora, collate_fn, model, processor
+from torch.utils.data import DataLoader
+from peft import get_peft_model
+from PIL import Image
+from helpers import utils
+
 """
 fine-tune-florence-2-vehicle.ipynb
 
@@ -14,17 +25,6 @@ Modules:
 Original file is located at
     https://colab.research.google.com/drive/1-GAqpF8VsjM8XkVO7DBA8GLpgXGJOwxj
 """
-
-# Import required libraries and modules
-# !pip install timm flash_attn einops;
-# !pip install -q roboflow git+https://github.com/roboflow/supervision.git
-from prepareData import DetectionDataset
-from train import train_model
-from config.config import configLora, collate_fn, model, processor
-from torch.utils.data import DataLoader
-from peft import get_peft_model
-from PIL import Image
-from helpers import utils
 
 # Set model and processor for the `utils.py` module
 utils.set_model_info(model, processor)
