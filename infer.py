@@ -12,7 +12,7 @@ from transformers import AutoProcessor, AutoModelForCausalLM
 
 CHECKPOINT = "saved_model/saved_model_test/epoch_3"
 
-path = "dataset/train/Screenshot 2024-11-15 102741.png"
+path = "dataset/valid/frame9.png"
 image = Image.open(path)
 image_rgb = Image.open(path).convert("RGB")
 

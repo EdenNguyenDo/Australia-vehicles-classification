@@ -2,7 +2,6 @@ from peft import LoraConfig
 from torch import device, cuda
 from transformers import AutoProcessor, AutoModelForCausalLM
 
-#todo replace below to point to the locally downloaed Florence-2-large
 CHECKPOINT = "C://transmetric//opt//microsoft//AI_model"
 DEVICE = device("cuda" if cuda.is_available() else "cpu")
 
